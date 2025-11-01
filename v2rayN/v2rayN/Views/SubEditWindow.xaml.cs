@@ -1,8 +1,3 @@
-using System.Reactive.Disposables;
-using System.Windows;
-using ReactiveUI;
-using ServiceLib.Manager;
-
 namespace v2rayN.Views;
 
 public partial class SubEditWindow
@@ -11,8 +6,8 @@ public partial class SubEditWindow
     {
         InitializeComponent();
 
-        this.Owner = Application.Current.MainWindow;
-        this.Loaded += Window_Loaded;
+        Owner = Application.Current.MainWindow;
+        Loaded += Window_Loaded;
 
         ViewModel = new SubEditViewModel(subItem, UpdateViewHandler);
 
@@ -44,7 +39,7 @@ public partial class SubEditWindow
         switch (action)
         {
             case EViewAction.CloseWindow:
-                this.DialogResult = true;
+                DialogResult = true;
                 break;
         }
         return await Task.FromResult(true);
@@ -53,5 +48,33 @@ public partial class SubEditWindow
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         txtRemarks.Focus();
+    }
+
+    private async void BtnSelectPrevProfile_Click(object sender, RoutedEventArgs e)
+    {
+        var selectWindow = new ProfilesSelectWindow();
+        selectWindow.SetConfigTypeFilter(new[] { EConfigType.Custom, EConfigType.PolicyGroup, EConfigType.ProxyChain }, exclude: true);
+        if (selectWindow.ShowDialog() == true)
+        {
+            var profile = await selectWindow.ProfileItem;
+            if (profile != null)
+            {
+                txtPrevProfile.Text = profile.Remarks;
+            }
+        }
+    }
+
+    private async void BtnSelectNextProfile_Click(object sender, RoutedEventArgs e)
+    {
+        var selectWindow = new ProfilesSelectWindow();
+        selectWindow.SetConfigTypeFilter(new[] { EConfigType.Custom, EConfigType.PolicyGroup, EConfigType.ProxyChain }, exclude: true);
+        if (selectWindow.ShowDialog() == true)
+        {
+            var profile = await selectWindow.ProfileItem;
+            if (profile != null)
+            {
+                txtNextProfile.Text = profile.Remarks;
+            }
+        }
     }
 }

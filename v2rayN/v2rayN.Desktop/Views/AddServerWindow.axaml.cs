@@ -1,8 +1,3 @@
-using System.Reactive.Disposables;
-using Avalonia.Controls;
-using Avalonia.Interactivity;
-using ReactiveUI;
-using ServiceLib.Manager;
 using v2rayN.Desktop.Base;
 
 namespace v2rayN.Desktop.Views;
@@ -18,8 +13,8 @@ public partial class AddServerWindow : WindowBase<AddServerViewModel>
     {
         InitializeComponent();
 
-        this.Loaded += Window_Loaded;
-        btnCancel.Click += (s, e) => this.Close();
+        Loaded += Window_Loaded;
+        btnCancel.Click += (s, e) => Close();
         cmbNetwork.SelectionChanged += CmbNetwork_SelectionChanged;
         cmbStreamSecurity.SelectionChanged += CmbStreamSecurity_SelectionChanged;
         btnGUID.Click += btnGUID_Click;
@@ -201,7 +196,7 @@ public partial class AddServerWindow : WindowBase<AddServerViewModel>
             this.BindCommand(ViewModel, vm => vm.SaveCmd, v => v.btnSave).DisposeWith(disposables);
         });
 
-        this.Title = $"{profileItem.ConfigType}";
+        Title = $"{profileItem.ConfigType}";
     }
 
     private async Task<bool> UpdateViewHandler(EViewAction action, object? obj)
@@ -209,7 +204,7 @@ public partial class AddServerWindow : WindowBase<AddServerViewModel>
         switch (action)
         {
             case EViewAction.CloseWindow:
-                this.Close(true);
+                Close(true);
                 break;
         }
         return await Task.FromResult(true);

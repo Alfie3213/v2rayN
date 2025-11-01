@@ -1,8 +1,3 @@
-using System.Reactive.Disposables;
-using Avalonia.Controls;
-using Avalonia.Interactivity;
-using ReactiveUI;
-using ServiceLib.Manager;
 using v2rayN.Desktop.Base;
 
 namespace v2rayN.Desktop.Views;
@@ -16,7 +11,7 @@ public partial class OptionSettingWindow : WindowBase<OptionSettingViewModel>
         InitializeComponent();
 
         Loaded += Window_Loaded;
-        btnCancel.Click += (s, e) => this.Close();
+        btnCancel.Click += (s, e) => Close();
         _config = AppManager.Instance.Config;
 
         ViewModel = new OptionSettingViewModel(UpdateViewHandler);
@@ -87,7 +82,6 @@ public partial class OptionSettingWindow : WindowBase<OptionSettingViewModel>
             this.Bind(ViewModel, vm => vm.KeepOlderDedupl, v => v.togKeepOlderDedupl.IsChecked).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.EnableAutoAdjustMainLvColWidth, v => v.togEnableAutoAdjustMainLvColWidth.IsChecked).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.EnableUpdateSubOnlyRemarksExist, v => v.togEnableUpdateSubOnlyRemarksExist.IsChecked).DisposeWith(disposables);
-            this.Bind(ViewModel, vm => vm.EnableSecurityProtocolTls13, v => v.togEnableSecurityProtocolTls13.IsChecked).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.AutoHideStartup, v => v.togAutoHideStartup.IsChecked).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.Hide2TrayWhenClose, v => v.togHide2TrayWhenClose.IsChecked).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.DoubleClick2Activate, v => v.togDoubleClick2Activate.IsChecked).DisposeWith(disposables);
@@ -132,19 +126,25 @@ public partial class OptionSettingWindow : WindowBase<OptionSettingViewModel>
 
             labHide2TrayWhenClose.IsVisible = false;
             togHide2TrayWhenClose.IsVisible = false;
+            labHide2TrayWhenCloseTip.IsVisible = false;
         }
         else if (Utils.IsLinux())
         {
             txbSettingsExceptionTip.IsVisible = false;
             panSystemProxyAdvanced.IsVisible = false;
+
+            tbAutoRunTip.IsVisible = false;
         }
         else if (Utils.IsOSX())
         {
             txbSettingsExceptionTip.IsVisible = false;
             panSystemProxyAdvanced.IsVisible = false;
 
+            tbAutoRunTip.IsVisible = false;
+
             labHide2TrayWhenClose.IsVisible = false;
             togHide2TrayWhenClose.IsVisible = false;
+            labHide2TrayWhenCloseTip.IsVisible = false;
         }
     }
 
@@ -153,7 +153,7 @@ public partial class OptionSettingWindow : WindowBase<OptionSettingViewModel>
         switch (action)
         {
             case EViewAction.CloseWindow:
-                this.Close(true);
+                Close(true);
                 break;
 
             case EViewAction.InitSettingFont:

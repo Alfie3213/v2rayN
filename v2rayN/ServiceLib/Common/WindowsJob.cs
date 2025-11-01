@@ -1,17 +1,14 @@
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-
 namespace ServiceLib.Common;
     /*
      * See:
      * http://stackoverflow.com/questions/6266820/working-example-of-createjobobject-setinformationjobobject-pinvoke-in-net
      */
 
-    public sealed class Job : IDisposable
+    public sealed class WindowsJob : IDisposable
     {
         private IntPtr handle = IntPtr.Zero;
 
-        public Job()
+        public WindowsJob()
         {
             handle = CreateJobObject(IntPtr.Zero, null);
             var extendedInfoPtr = IntPtr.Zero;
@@ -94,7 +91,7 @@ namespace ServiceLib.Common;
             }
         }
 
-        ~Job()
+        ~WindowsJob()
         {
             Dispose(false);
         }

@@ -1,10 +1,3 @@
-using System.Reactive.Disposables;
-using System.Windows;
-using System.Windows.Input;
-using System.Windows.Threading;
-using ReactiveUI;
-using ServiceLib.Manager;
-using Splat;
 using v2rayN.Manager;
 
 namespace v2rayN.Views;
@@ -17,8 +10,8 @@ public partial class StatusBarView
     {
         InitializeComponent();
         _config = AppManager.Instance.Config;
-        ViewModel = new StatusBarViewModel(UpdateViewHandler);
-        Locator.CurrentMutable.RegisterLazySingleton(() => ViewModel, typeof(StatusBarViewModel));
+        ViewModel = StatusBarViewModel.Instance;
+        ViewModel?.InitUpdateView(UpdateViewHandler);
 
         menuExit.Click += menuExit_Click;
         txtRunningServerDisplay.PreviewMouseDown += txtRunningInfoDisplay_MouseDoubleClick;
@@ -78,11 +71,11 @@ public partial class StatusBarView
         switch (action)
         {
             case EViewAction.DispatcherRefreshIcon:
-                Application.Current?.Dispatcher.Invoke((async () =>
+                Application.Current?.Dispatcher.Invoke(async () =>
                 {
                     tbNotify.Icon = await WindowsManager.Instance.GetNotifyIcon(_config);
                     Application.Current.MainWindow.Icon = WindowsManager.Instance.GetAppIcon(_config);
-                }), DispatcherPriority.Normal);
+                }, DispatcherPriority.Normal);
                 break;
 
             case EViewAction.SetClipboardData:

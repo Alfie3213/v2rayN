@@ -1,8 +1,3 @@
-using System.Reactive;
-using ReactiveUI;
-using ReactiveUI.Fody.Helpers;
-using Splat;
-
 namespace ServiceLib.ViewModels;
 
 public class BackupAndRestoreViewModel : MyReactiveObject

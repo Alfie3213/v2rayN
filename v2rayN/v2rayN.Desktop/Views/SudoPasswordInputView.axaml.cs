@@ -1,8 +1,5 @@
-using Avalonia.Controls;
-using Avalonia.Threading;
 using CliWrap.Buffered;
 using DialogHostAvalonia;
-using ServiceLib.Manager;
 
 namespace v2rayN.Desktop.Views;
 
@@ -12,7 +9,7 @@ public partial class SudoPasswordInputView : UserControl
     {
         InitializeComponent();
 
-        this.Loaded += (s, e) => txtPassword.Focus();
+        Loaded += (s, e) => txtPassword.Focus();
 
         btnSave.Click += async (_, _) => await SavePasswordAsync();
 

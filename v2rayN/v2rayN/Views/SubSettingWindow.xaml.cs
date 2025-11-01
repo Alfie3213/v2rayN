@@ -1,10 +1,4 @@
-using System.ComponentModel;
-using System.Reactive.Disposables;
-using System.Windows;
-using System.Windows.Input;
 using MaterialDesignThemes.Wpf;
-using ReactiveUI;
-using ServiceLib.Manager;
 
 namespace v2rayN.Views;
 
@@ -14,10 +8,10 @@ public partial class SubSettingWindow
     {
         InitializeComponent();
 
-        this.Owner = Application.Current.MainWindow;
+        Owner = Application.Current.MainWindow;
 
         ViewModel = new SubSettingViewModel(UpdateViewHandler);
-        this.Closing += SubSettingWindow_Closing;
+        Closing += SubSettingWindow_Closing;
         lstSubscription.MouseDoubleClick += LstSubscription_MouseDoubleClick;
         lstSubscription.SelectionChanged += LstSubscription_SelectionChanged;
         menuClose.Click += menuClose_Click;
@@ -40,7 +34,7 @@ public partial class SubSettingWindow
         switch (action)
         {
             case EViewAction.CloseWindow:
-                this.DialogResult = true;
+                DialogResult = true;
                 break;
 
             case EViewAction.ShowYesNo:
@@ -53,7 +47,7 @@ public partial class SubSettingWindow
             case EViewAction.SubEditWindow:
                 if (obj is null)
                     return false;
-                return (new SubEditWindow((SubItem)obj)).ShowDialog() ?? false;
+                return new SubEditWindow((SubItem)obj).ShowDialog() ?? false;
 
             case EViewAction.ShareSub:
                 if (obj is null)
@@ -70,7 +64,7 @@ public partial class SubSettingWindow
         {
             return;
         }
-        var img = QRCodeUtils.GetQRCode(url);
+        var img = QRCodeWindowsUtils.GetQRCode(url);
         var dialog = new QrcodeView()
         {
             imgQrcode = { Source = img },
@@ -84,7 +78,7 @@ public partial class SubSettingWindow
     {
         if (ViewModel?.IsModified == true)
         {
-            this.DialogResult = true;
+            DialogResult = true;
         }
     }
 
@@ -105,11 +99,11 @@ public partial class SubSettingWindow
     {
         if (ViewModel?.IsModified == true)
         {
-            this.DialogResult = true;
+            DialogResult = true;
         }
         else
         {
-            this.Close();
+            Close();
         }
     }
 }

@@ -1,8 +1,3 @@
-using System.Reactive.Disposables;
-using System.Windows;
-using ReactiveUI;
-using ServiceLib.Manager;
-
 namespace v2rayN.Views;
 
 public partial class RoutingRuleDetailsWindow
@@ -11,8 +6,8 @@ public partial class RoutingRuleDetailsWindow
     {
         InitializeComponent();
 
-        this.Owner = Application.Current.MainWindow;
-        this.Loaded += Window_Loaded;
+        Owner = Application.Current.MainWindow;
+        Loaded += Window_Loaded;
         clbProtocol.SelectionChanged += ClbProtocol_SelectionChanged;
         clbInboundTag.SelectionChanged += ClbInboundTag_SelectionChanged;
 
@@ -22,6 +17,7 @@ public partial class RoutingRuleDetailsWindow
         clbProtocol.ItemsSource = Global.RuleProtocols;
         clbInboundTag.ItemsSource = Global.InboundTags;
         cmbNetwork.ItemsSource = Global.RuleNetworks;
+        cmbRuleType.ItemsSource = Utils.GetEnumNames<ERuleType>().AppendEmpty();
 
         if (!rulesItem.Id.IsNullOrEmpty())
         {
@@ -46,6 +42,7 @@ public partial class RoutingRuleDetailsWindow
             this.Bind(ViewModel, vm => vm.IP, v => v.txtIP.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.Process, v => v.txtProcess.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.AutoSort, v => v.chkAutoSort.IsChecked).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.RuleType, v => v.cmbRuleType.Text).DisposeWith(disposables);
 
             this.BindCommand(ViewModel, vm => vm.SaveCmd, v => v.btnSave).DisposeWith(disposables);
         });
@@ -57,7 +54,7 @@ public partial class RoutingRuleDetailsWindow
         switch (action)
         {
             case EViewAction.CloseWindow:
-                this.DialogResult = true;
+                DialogResult = true;
                 break;
         }
         return await Task.FromResult(true);
@@ -87,5 +84,19 @@ public partial class RoutingRuleDetailsWindow
     private void linkRuleobjectDoc_Click(object sender, RoutedEventArgs e)
     {
         ProcUtils.ProcessStart("https://xtls.github.io/config/routing.html#ruleobject");
+    }
+
+    private async void BtnSelectProfile_Click(object sender, RoutedEventArgs e)
+    {
+        var selectWindow = new ProfilesSelectWindow();
+        selectWindow.SetConfigTypeFilter(new[] { EConfigType.Custom }, exclude: true);
+        if (selectWindow.ShowDialog() == true)
+        {
+            var profile = await selectWindow.ProfileItem;
+            if (profile != null)
+            {
+                cmbOutboundTag.Text = profile.Remarks;
+            }
+        }
     }
 }

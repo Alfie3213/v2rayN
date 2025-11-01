@@ -1,13 +1,3 @@
-using System.Reactive;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Runtime.InteropServices;
-using DynamicData;
-using DynamicData.Binding;
-using ReactiveUI;
-using ReactiveUI.Fody.Helpers;
-using Splat;
-
 namespace ServiceLib.ViewModels;
 
 public class CheckUpdateViewModel : MyReactiveObject
@@ -38,7 +28,7 @@ public class CheckUpdateViewModel : MyReactiveObject
         this.WhenAnyValue(
         x => x.EnableCheckPreReleaseUpdate,
         y => y == true)
-            .Subscribe(c => { _config.CheckUpdateItem.CheckPreReleaseUpdate = EnableCheckPreReleaseUpdate; });
+            .Subscribe(c => _config.CheckUpdateItem.CheckPreReleaseUpdate = EnableCheckPreReleaseUpdate);
 
         RefreshCheckUpdateItems();
     }
@@ -63,6 +53,16 @@ public class CheckUpdateViewModel : MyReactiveObject
 
     private CheckUpdateModel GetCheckUpdateModel(string coreType)
     {
+        if (coreType == _v2rayN && Utils.IsPackagedInstall())
+        {
+            return new()
+            {
+                IsSelected = false,
+                CoreType = coreType,
+                Remarks = ResUI.menuCheckUpdate + " (Not Support)",
+            };
+        }
+
         return new()
         {
             IsSelected = _config.CheckUpdateItem.SelectedCoreTypes?.Contains(coreType) ?? true,
@@ -104,6 +104,11 @@ public class CheckUpdateViewModel : MyReactiveObject
             }
             else if (item.CoreType == _v2rayN)
             {
+                if (Utils.IsPackagedInstall())
+                {
+                    await UpdateView(_v2rayN, "Not Support");
+                    continue;
+                }
                 await CheckUpdateN(EnableCheckPreReleaseUpdate);
             }
             else if (item.CoreType == ECoreType.Xray.ToString())
@@ -143,11 +148,8 @@ public class CheckUpdateViewModel : MyReactiveObject
                 UpdatedPlusPlus(_geo, "");
             }
         }
-        await (new UpdateService()).UpdateGeoFileAll(_config, _updateUI)
-            .ContinueWith(t =>
-            {
-                UpdatedPlusPlus(_geo, "");
-            });
+        await new UpdateService().UpdateGeoFileAll(_config, _updateUI)
+            .ContinueWith(t => UpdatedPlusPlus(_geo, ""));
     }
 
     private async Task CheckUpdateN(bool preRelease)
@@ -161,11 +163,8 @@ public class CheckUpdateViewModel : MyReactiveObject
                 UpdatedPlusPlus(_v2rayN, msg);
             }
         }
-        await (new UpdateService()).CheckUpdateGuiN(_config, _updateUI, preRelease)
-            .ContinueWith(t =>
-            {
-                UpdatedPlusPlus(_v2rayN, "");
-            });
+        await new UpdateService().CheckUpdateGuiN(_config, _updateUI, preRelease)
+            .ContinueWith(t => UpdatedPlusPlus(_v2rayN, ""));
     }
 
     private async Task CheckUpdateCore(CheckUpdateModel model, bool preRelease)
@@ -181,11 +180,8 @@ public class CheckUpdateViewModel : MyReactiveObject
             }
         }
         var type = (ECoreType)Enum.Parse(typeof(ECoreType), model.CoreType);
-        await (new UpdateService()).CheckUpdateCore(type, _config, _updateUI, preRelease)
-            .ContinueWith(t =>
-            {
-                UpdatedPlusPlus(model.CoreType, "");
-            });
+        await new UpdateService().CheckUpdateCore(type, _config, _updateUI, preRelease)
+            .ContinueWith(t => UpdatedPlusPlus(model.CoreType, ""));
     }
 
     private async Task UpdateFinished()
@@ -219,11 +215,11 @@ public class CheckUpdateViewModel : MyReactiveObject
     {
         if (blReload)
         {
-            Locator.Current.GetService<MainWindowViewModel>()?.Reload();
+            AppEvents.ReloadRequested.Publish();
         }
         else
         {
-            Locator.Current.GetService<MainWindowViewModel>()?.CloseCore();
+            await CoreManager.Instance.CoreStop();
         }
     }
 
@@ -296,7 +292,7 @@ public class CheckUpdateViewModel : MyReactiveObject
 
             if (Utils.IsNonWindows())
             {
-                var filesList = (new DirectoryInfo(toPath)).GetFiles().Select(u => u.FullName).ToList();
+                var filesList = new DirectoryInfo(toPath).GetFiles().Select(u => u.FullName).ToList();
                 foreach (var file in filesList)
                 {
                     await Utils.SetLinuxChmod(Path.Combine(toPath, item.CoreType.ToLower()));
@@ -334,9 +330,6 @@ public class CheckUpdateViewModel : MyReactiveObject
         {
             return;
         }
-
-        var itemCopy = JsonUtils.DeepCopy(found);
-        itemCopy.Remarks = model.Remarks;
-        CheckUpdateModels.Replace(found, itemCopy);
+        found.Remarks = model.Remarks;
     }
 }

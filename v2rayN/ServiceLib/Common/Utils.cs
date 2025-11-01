@@ -1,13 +1,5 @@
 using System.Collections.Specialized;
-using System.Diagnostics;
-using System.Net;
-using System.Net.NetworkInformation;
-using System.Net.Sockets;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Security.Principal;
-using System.Text;
 using CliWrap;
 using CliWrap.Buffered;
 
@@ -85,13 +77,19 @@ public class Utils
     /// Base64 Encode
     /// </summary>
     /// <param name="plainText"></param>
+    /// <param name="removePadding"></param>
     /// <returns></returns>
-    public static string Base64Encode(string plainText)
+    public static string Base64Encode(string plainText, bool removePadding = false)
     {
         try
         {
             var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
-            return Convert.ToBase64String(plainTextBytes);
+            var base64 = Convert.ToBase64String(plainTextBytes);
+            if (removePadding)
+            {
+                base64 = base64.TrimEnd('=');
+            }
+            return base64;
         }
         catch (Exception ex)
         {
@@ -112,7 +110,7 @@ public class Utils
         {
             if (plainText.IsNullOrEmpty())
             {
-                return "";
+                return string.Empty;
             }
 
             plainText = plainText.Trim()
@@ -329,6 +327,136 @@ public class Utils
             .Cast<TEnum>()
             .Select(e => e.ToString())
             .ToList();
+    }
+
+    public static Dictionary<string, List<string>> ParseHostsToDictionary(string hostsContent)
+    {
+        var userHostsMap = hostsContent
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            // skip full-line comments
+            .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("#"))
+            // strip inline comments (truncate at '#')
+            .Select(line =>
+            {
+                var index = line.IndexOf('#');
+                return index >= 0 ? line.Substring(0, index).Trim() : line;
+            })
+            // ensure line still contains valid parts
+            .Where(line => !string.IsNullOrWhiteSpace(line) && line.Contains(' '))
+            .Select(line => line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+            .Where(parts => parts.Length >= 2)
+            .GroupBy(parts => parts[0])
+            .ToDictionary(
+                group => group.Key,
+                group => group.SelectMany(parts => parts.Skip(1)).ToList()
+            );
+
+        return userHostsMap;
+    }
+
+    /// <summary>
+    /// Parse a possibly non-standard URL into scheme, domain, port, and path.
+    /// If parsing fails, the entire input is returned as domain, and others are empty or zero.
+    /// </summary>
+    /// <param name="url">Input URL or string</param>
+    /// <returns>(domain, scheme, port, path)</returns>
+    public static (string domain, string scheme, int port, string path) ParseUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return ("", "", 0, "");
+        }
+
+        // 1. First, try to parse using the standard Uri class.
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && !string.IsNullOrEmpty(uri.Host))
+        {
+            var scheme = uri.Scheme;
+            var domain = uri.Host;
+            var port = uri.IsDefaultPort ? 0 : uri.Port;
+            var path = uri.PathAndQuery;
+            return (domain, scheme, port, path);
+        }
+
+        // 2. Try to handle more general cases with a regular expression, including non-standard schemes.
+        // This regex captures the scheme (optional), authority (host+port), and path (optional).
+        var match = Regex.Match(url, @"^(?:([a-zA-Z][a-zA-Z0-9+.-]*):/{2,})?([^/?#]+)([^?#]*)?.*$");
+
+        if (match.Success)
+        {
+            var scheme = match.Groups[1].Value;
+            var authority = match.Groups[2].Value;
+            var path = match.Groups[3].Value;
+
+            // Remove userinfo from the authority part.
+            var atIndex = authority.LastIndexOf('@');
+            if (atIndex > 0)
+            {
+                authority = authority.Substring(atIndex + 1);
+            }
+
+            var (domain, port) = ParseAuthority(authority);
+
+            // If the parsed domain is empty, it means the authority part is malformed, so trigger the fallback.
+            if (!string.IsNullOrEmpty(domain))
+            {
+                return (domain, scheme, port, path);
+            }
+        }
+
+        // 3. If all of the above fails, execute the final fallback strategy.
+        return (url, "", 0, "");
+    }
+
+    /// <summary>
+    /// Helper function to parse domain and port from the authority part, with correct handling for IPv6.
+    /// </summary>
+    private static (string domain, int port) ParseAuthority(string authority)
+    {
+        if (string.IsNullOrEmpty(authority))
+        {
+            return ("", 0);
+        }
+
+        var port = 0;
+        var domain = authority;
+
+        // Handle IPv6 addresses, e.g., "[2001:db8::1]:443"
+        if (authority.StartsWith("[") && authority.Contains("]"))
+        {
+            var closingBracketIndex = authority.LastIndexOf(']');
+            if (closingBracketIndex < authority.Length - 1 && authority[closingBracketIndex + 1] == ':')
+            {
+                // Port exists
+                var portStr = authority.Substring(closingBracketIndex + 2);
+                if (int.TryParse(portStr, out var portNum))
+                {
+                    port = portNum;
+                }
+                domain = authority.Substring(0, closingBracketIndex + 1);
+            }
+            else
+            {
+                // No port
+                domain = authority;
+            }
+        }
+        else // Handle IPv4 or domain names
+        {
+            var lastColonIndex = authority.LastIndexOf(':');
+            // Ensure there are digits after the colon and that this colon is not part of an IPv6 address.
+            if (lastColonIndex > 0 && lastColonIndex < authority.Length - 1 && authority.Substring(lastColonIndex + 1).All(char.IsDigit))
+            {
+                var portStr = authority.Substring(lastColonIndex + 1);
+                if (int.TryParse(portStr, out var portNum))
+                {
+                    port = portNum;
+                    domain = authority.Substring(0, lastColonIndex);
+                }
+            }
+        }
+
+        return (domain, port);
     }
 
     #endregion 转换函数
@@ -582,9 +710,9 @@ public class Utils
                     if (host.StartsWith("#"))
                         continue;
                     var hostItem = host.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                    if (hostItem.Length != 2)
+                    if (hostItem.Length < 2)
                         continue;
-                    systemHosts.Add(hostItem.Last(), hostItem.First());
+                    systemHosts.Add(hostItem[1], hostItem[0]);
                 }
             }
         }
@@ -835,13 +963,13 @@ public class Utils
 
     #region Platform
 
-    public static bool IsWindows() => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+    public static bool IsWindows() => OperatingSystem.IsWindows();
 
-    public static bool IsLinux() => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+    public static bool IsLinux() => OperatingSystem.IsLinux();
 
-    public static bool IsOSX() => RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+    public static bool IsOSX() => OperatingSystem.IsMacOS();
 
-    public static bool IsNonWindows() => !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+    public static bool IsNonWindows() => !OperatingSystem.IsWindows();
 
     public static string GetExeName(string name)
     {
@@ -853,6 +981,45 @@ public class Utils
         if (IsWindows())
         {
             return new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
+        }
+        return false;
+    }
+
+    public static bool IsPackagedInstall()
+    {
+        try
+        {
+            if (IsWindows() || IsOSX())
+            {
+                return false;
+            }
+
+            var exePath = GetExePath();
+            var baseDir = string.IsNullOrEmpty(exePath) ? StartupPath() : Path.GetDirectoryName(exePath) ?? "";
+            var p = baseDir.Replace('\\', '/');
+
+            if (string.IsNullOrEmpty(p))
+            {
+                return false;
+            }
+
+            if (p.StartsWith("/opt/v2rayN", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (p.StartsWith("/usr/lib/v2rayN", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (p.StartsWith("/usr/share/v2rayN", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        catch
+        {
         }
         return false;
     }
@@ -872,7 +1039,7 @@ public class Utils
         if (SetUnixFileMode(fileName))
         {
             Logging.SaveLog($"Successfully set the file execution permission, {fileName}");
-            return "";
+            return string.Empty;
         }
 
         if (fileName.Contains(' '))

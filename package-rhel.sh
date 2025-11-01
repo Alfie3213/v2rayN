@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ===== Require Red Hat Enterprise Linux/RockyLinux/AlmaLinux/CentOS OR Ubuntu/Debian ====
+# == Require Red Hat Enterprise Linux/FedoraLinux/RockyLinux/AlmaLinux/CentOS OR Ubuntu/Debian ==
 if [[ -r /etc/os-release ]]; then
   . /etc/os-release
   case "$ID" in
-    rhel|rocky|almalinux|centos|ubuntu|debian)
+    rhel|rocky|almalinux|fedora|centos|ubuntu|debian)
       echo "[OK] Detected supported system: $NAME $VERSION_ID"
       ;;
     *)
@@ -18,6 +18,23 @@ else
   echo "[ERROR] Cannot detect system (missing /etc/os-release)."
   exit 1
 fi
+
+# ======================== Kernel version check (require >= 6.11) =======================
+MIN_KERNEL_MAJOR=6
+MIN_KERNEL_MINOR=11
+KERNEL_FULL=$(uname -r)
+KERNEL_MAJOR=$(echo "$KERNEL_FULL" | cut -d. -f1)
+KERNEL_MINOR=$(echo "$KERNEL_FULL" | cut -d. -f2)
+
+echo "[INFO] Detected kernel version: $KERNEL_FULL"
+
+if (( KERNEL_MAJOR < MIN_KERNEL_MAJOR )) || { (( KERNEL_MAJOR == MIN_KERNEL_MAJOR )) && (( KERNEL_MINOR < MIN_KERNEL_MINOR )); }; then
+  echo "[ERROR] Kernel $KERNEL_FULL is too old. Requires Linux >= ${MIN_KERNEL_MAJOR}.${MIN_KERNEL_MINOR}."
+  echo "Please upgrade your system or use a newer container (e.g. Fedora 42+, RHEL 10+, Debian 13+)."
+  exit 1
+fi
+
+echo "[OK] Kernel version >= ${MIN_KERNEL_MAJOR}.${MIN_KERNEL_MINOR}."
 
 # ===== Config & Parse arguments =========================================================
 VERSION_ARG="${1:-}"     # Pass version number like 7.13.8, or leave empty
@@ -390,25 +407,30 @@ download_mihomo() {
   chmod +x "$outroot/bin/mihomo/mihomo" || true
 }
 
-# Move geo files to a unified path: outroot/bin/xray/
+# Move geo files to a unified path: outroot/bin
 unify_geo_layout() {
   local outroot="$1"
-  mkdir -p "$outroot/bin/xray"
-  local srcs=( \
-    "$outroot/bin/geosite.dat" \
-    "$outroot/bin/geoip.dat" \
-    "$outroot/bin/geoip-only-cn-private.dat" \
-    "$outroot/bin/Country.mmdb" \
-    "$outroot/bin/geoip.metadb" \
+  mkdir -p "$outroot/bin"
+  local names=( \
+    "geosite.dat" \
+    "geoip.dat" \
+    "geoip-only-cn-private.dat" \
+    "Country.mmdb" \
+    "geoip.metadb" \
   )
-  for s in "${srcs[@]}"; do
-    if [[ -f "$s" ]]; then
-      mv -f "$s" "$outroot/bin/xray/$(basename "$s")"
+  for n in "${names[@]}"; do
+    # If file exists under bin/xray/, move it up to bin/
+    if [[ -f "$outroot/bin/xray/$n" ]]; then
+      mv -f "$outroot/bin/xray/$n" "$outroot/bin/$n"
+    fi
+    # If file already in bin/, leave it as-is
+    if [[ -f "$outroot/bin/$n" ]]; then
+      :
     fi
   done
 }
 
-# Download geo/rule assets; then unify to bin/xray/
+# Download geo/rule assets; then unify to bin/
 download_geo_assets() {
   local outroot="$1"
   local bin_dir="$outroot/bin"
@@ -442,7 +464,7 @@ download_geo_assets() {
       "https://raw.githubusercontent.com/2dust/sing-box-rules/rule-set-geosite/$f" || true
   done
 
-  # Unify to bin/xray/
+  # Unify to bin/
   unify_geo_layout "$outroot"
 }
 
@@ -480,7 +502,7 @@ download_v2rayn_bundle() {
     rm -rf "$nested_dir"
   fi
 
-  # Unify to bin/xray/
+  # Unify to bin/
   unify_geo_layout "$outroot"
 
   echo "[+] Bundle extracted to $outroot"
@@ -609,8 +631,13 @@ ExclusiveArch:  aarch64 x86_64
 Source0:        __PKGROOT__.tar.gz
 
 # Runtime dependencies (Avalonia / X11 / Fonts / GL)
-Requires:       libX11, libXrandr, libXcursor, libXi, libXext, libxcb, libXrender, libXfixes, libXinerama, libxkbcommon
-Requires:       fontconfig, freetype, cairo, pango, mesa-libEGL, mesa-libGL
+Requires:       freetype, cairo, pango, openssl, mesa-libEGL, mesa-libGL
+Requires:       glibc >= 2.34
+Requires:       fontconfig >= 2.13.1
+Requires:       desktop-file-utils >= 0.26
+Requires:       xdg-utils >= 1.1.3
+Requires:       coreutils >= 8.32
+Requires:       bash >= 5.1
 
 %description
 v2rayN Linux for Red Hat Enterprise Linux
@@ -629,24 +656,12 @@ https://github.com/2dust/v2rayN
 install -dm0755 %{buildroot}/opt/v2rayN
 cp -a * %{buildroot}/opt/v2rayN/
 
-# Launcher (prefer native ELF first, then DLL fallback; also create Geo symlinks for the user)
+# Launcher (prefer native ELF first, then DLL fallback)
 install -dm0755 %{buildroot}%{_bindir}
 cat > %{buildroot}%{_bindir}/v2rayn << 'EOF'
 #!/usr/bin/bash
 set -euo pipefail
 DIR="/opt/v2rayN"
-
-# --- Symlink GEO files into user's XDG dir (first-run convenience) ---
-XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
-USR_GEO_DIR="$XDG_DATA_HOME/v2rayN/bin"
-SYS_XRAY_DIR="$DIR/bin/xray"
-mkdir -p "$USR_GEO_DIR"
-for f in geosite.dat geoip.dat geoip-only-cn-private.dat Country.mmdb; do
-  if [[ -f "$SYS_XRAY_DIR/$f" && ! -e "$USR_GEO_DIR/$f" ]]; then
-    ln -s "$SYS_XRAY_DIR/$f" "$USR_GEO_DIR/$f" || true
-  fi
-done
-# --- end GEO ---
 
 # Prefer native apphost
 if [[ -x "$DIR/v2rayN" ]]; then exec "$DIR/v2rayN" "$@"; fi

@@ -1,7 +1,3 @@
-using System.Reactive;
-using ReactiveUI;
-using ReactiveUI.Fody.Helpers;
-
 namespace ServiceLib.ViewModels;
 
 public class OptionSettingViewModel : MyReactiveObject
@@ -52,7 +48,6 @@ public class OptionSettingViewModel : MyReactiveObject
     [Reactive] public bool DisplayRealTimeSpeed { get; set; }
     [Reactive] public bool EnableAutoAdjustMainLvColWidth { get; set; }
     [Reactive] public bool EnableUpdateSubOnlyRemarksExist { get; set; }
-    [Reactive] public bool EnableSecurityProtocolTls13 { get; set; }
     [Reactive] public bool AutoHideStartup { get; set; }
     [Reactive] public bool Hide2TrayWhenClose { get; set; }
     [Reactive] public bool EnableDragDropSort { get; set; }
@@ -170,7 +165,6 @@ public class OptionSettingViewModel : MyReactiveObject
         KeepOlderDedupl = _config.GuiItem.KeepOlderDedupl;
         EnableAutoAdjustMainLvColWidth = _config.UiItem.EnableAutoAdjustMainLvColWidth;
         EnableUpdateSubOnlyRemarksExist = _config.UiItem.EnableUpdateSubOnlyRemarksExist;
-        EnableSecurityProtocolTls13 = _config.GuiItem.EnableSecurityProtocolTls13;
         AutoHideStartup = _config.UiItem.AutoHideStartup;
         Hide2TrayWhenClose = _config.UiItem.Hide2TrayWhenClose;
         EnableDragDropSort = _config.UiItem.EnableDragDropSort;
@@ -279,12 +273,12 @@ public class OptionSettingViewModel : MyReactiveObject
             NoticeManager.Instance.Enqueue(ResUI.FillLocalListeningPort);
             return;
         }
-        var needReboot = (EnableStatistics != _config.GuiItem.EnableStatistics
+        var needReboot = EnableStatistics != _config.GuiItem.EnableStatistics
                           || DisplayRealTimeSpeed != _config.GuiItem.DisplayRealTimeSpeed
                         || EnableDragDropSort != _config.UiItem.EnableDragDropSort
                         || EnableHWA != _config.GuiItem.EnableHWA
                         || CurrentFontFamily != _config.UiItem.CurrentFontFamily
-                        || MainGirdOrientation != (int)_config.UiItem.MainGirdOrientation);
+                        || MainGirdOrientation != (int)_config.UiItem.MainGirdOrientation;
 
         //if (Utile.IsNullOrEmpty(Kcpmtu.ToString()) || !Utile.IsNumeric(Kcpmtu.ToString())
         //       || Utile.IsNullOrEmpty(Kcptti.ToString()) || !Utile.IsNumeric(Kcptti.ToString())
@@ -330,7 +324,6 @@ public class OptionSettingViewModel : MyReactiveObject
         _config.GuiItem.KeepOlderDedupl = KeepOlderDedupl;
         _config.UiItem.EnableAutoAdjustMainLvColWidth = EnableAutoAdjustMainLvColWidth;
         _config.UiItem.EnableUpdateSubOnlyRemarksExist = EnableUpdateSubOnlyRemarksExist;
-        _config.GuiItem.EnableSecurityProtocolTls13 = EnableSecurityProtocolTls13;
         _config.UiItem.AutoHideStartup = AutoHideStartup;
         _config.UiItem.Hide2TrayWhenClose = Hide2TrayWhenClose;
         _config.GuiItem.AutoUpdateInterval = AutoUpdateInterval;
@@ -382,7 +375,7 @@ public class OptionSettingViewModel : MyReactiveObject
 
     private async Task SaveCoreType()
     {
-        for (int k = 1; k <= _config.CoreTypeItem.Count; k++)
+        for (var k = 1; k <= _config.CoreTypeItem.Count; k++)
         {
             var item = _config.CoreTypeItem[k - 1];
             var type = string.Empty;

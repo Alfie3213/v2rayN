@@ -21,10 +21,10 @@ public class Hysteria2Fmt : BaseFmt
 
         var query = Utils.ParseQueryString(url.Query);
         ResolveStdTransport(query, ref item);
-        item.Path = Utils.UrlDecode(query["obfs-password"] ?? "");
-        item.AllowInsecure = (query["insecure"] ?? "") == "1" ? "true" : "false";
+        item.Path = GetQueryDecoded(query, "obfs-password");
+        item.AllowInsecure = GetQueryValue(query, "insecure") == "1" ? "true" : "false";
 
-        item.Ports = Utils.UrlDecode(query["mport"] ?? "");
+        item.Ports = GetQueryDecoded(query, "mport");
 
         return item;
     }
@@ -33,9 +33,9 @@ public class Hysteria2Fmt : BaseFmt
     {
         if (item == null)
             return null;
-        string url = string.Empty;
+        var url = string.Empty;
 
-        string remark = string.Empty;
+        var remark = string.Empty;
         if (item.Remarks.IsNotEmpty())
         {
             remark = "#" + Utils.UrlEncode(item.Remarks);
@@ -61,24 +61,6 @@ public class Hysteria2Fmt : BaseFmt
         }
 
         return ToUri(EConfigType.Hysteria2, item.Address, item.Port, item.Id, dicQuery, remark);
-    }
-
-    public static ProfileItem? ResolveFull(string strData, string? subRemarks)
-    {
-        if (Contains(strData, "server", "up", "down", "listen", "<html>", "<body>"))
-        {
-            var fileName = WriteAllText(strData);
-
-            var profileItem = new ProfileItem
-            {
-                CoreType = ECoreType.hysteria,
-                Address = fileName,
-                Remarks = subRemarks ?? "hysteria_custom"
-            };
-            return profileItem;
-        }
-
-        return null;
     }
 
     public static ProfileItem? ResolveFull2(string strData, string? subRemarks)

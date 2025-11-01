@@ -1,8 +1,3 @@
-using System.Reactive.Disposables;
-using System.Windows;
-using ReactiveUI;
-using ServiceLib.Manager;
-
 namespace v2rayN.Views;
 
 public partial class FullConfigTemplateWindow
@@ -13,7 +8,7 @@ public partial class FullConfigTemplateWindow
     {
         InitializeComponent();
 
-        this.Owner = Application.Current.MainWindow;
+        Owner = Application.Current.MainWindow;
         _config = AppManager.Instance.Config;
 
         ViewModel = new FullConfigTemplateViewModel(UpdateViewHandler);
@@ -40,7 +35,7 @@ public partial class FullConfigTemplateWindow
         switch (action)
         {
             case EViewAction.CloseWindow:
-                this.DialogResult = true;
+                DialogResult = true;
                 break;
         }
         return await Task.FromResult(true);

@@ -71,7 +71,6 @@ public class GUIItem
     public bool DisplayRealTimeSpeed { get; set; }
     public bool KeepOlderDedupl { get; set; }
     public int AutoUpdateInterval { get; set; }
-    public bool EnableSecurityProtocolTls13 { get; set; }
     public int TrayMenuServersLimit { get; set; } = 20;
     public bool EnableHWA { get; set; } = false;
     public bool EnableLog { get; set; } = true;
@@ -260,11 +259,11 @@ public class SimpleDNSItem
     public bool? UseSystemHosts { get; set; }
     public bool? AddCommonHosts { get; set; }
     public bool? FakeIP { get; set; }
+    public bool? GlobalFakeIp { get; set; }
     public bool? BlockBindingQuery { get; set; }
     public string? DirectDNS { get; set; }
     public string? RemoteDNS { get; set; }
-    public string? SingboxOutboundsResolveDNS { get; set; }
-    public string? SingboxFinalResolveDNS { get; set; }
+    public string? BootstrapDNS { get; set; }
     public string? RayStrategy4Freedom { get; set; }
     public string? SingboxStrategy4Direct { get; set; }
     public string? SingboxStrategy4Proxy { get; set; }

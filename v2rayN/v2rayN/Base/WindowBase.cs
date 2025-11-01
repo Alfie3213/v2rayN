@@ -1,7 +1,3 @@
-using System.Windows;
-using ReactiveUI;
-using ServiceLib.Manager;
-
 namespace v2rayN.Base;
 
 public class WindowBase<TViewModel> : ReactiveWindow<TViewModel> where TViewModel : class
